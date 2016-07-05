@@ -1,0 +1,32 @@
+﻿-- SELECT * FROM russia_aggregated_all limit 10; 
+-- SELECT  12345 AS uuid,* INTO russia_clusters FROM russia_aggregated_all limit 10; 
+-- INSERT INTO russia_clusters
+-- SELECT 12345, * FROM russia_aggregated_all WHERE gid IN 
+-- (15292, 15294, 15295, 15296, 15297, 15298, 15306, 15307, 15299, 15300, 15301, 15302, 15303, 15304, 15312, 15313, 15314, 15315, 15316, 15318, 15356, 15359, 15360, 15361, 15362, 15363)
+-- SELECT * FROM russia_clusters; 
+-- delete from russia_clusters; 
+-- DROP TABLE IF EXISTS russia_clusters; 
+-- SELECT 124 as uuid,* INTO russia_clusters from russia_flickr limit 10; 
+-- delete from russia_clusters;
+-- select * from russia_clusters; 
+--delete from russia_clusters; 
+-- SELECT count(distinct photo_id) from russia_clusters;
+-- add a column for a unique identifier  
+-- ALTER TABLE russia_clusters ADD COLUMN gid serial PRIMARY KEY;  
+-- -- create a column for the point geometry and set the projection to WGS 84  
+-- ALTER TABLE russia_clusters ADD COLUMN geom geometry(POINT,4326);  
+-- -- set the geometry column from our longitude and latitude fields, again projecting in WGS 84  
+-- UPDATE russia_clusters SET geom = ST_SetSRID(ST_MakePoint(photo_longitude,photo_latitude),4326);  
+-- -- Now, we'll create a spatial index  
+-- CREATE INDEX idx_russia_geom ON russia_clusters USING GIST(geom); 
+-- CREATE OR REPLACE VIEW russia_over_clusters AS  
+-- SELECT distinct * from russia_clusters order by uuid asc; 
+-- CREATE OR REPLACE VIEW russia_cluster_hulls AS 
+-- SELECT d.uuid,
+-- 	ST_ConvexHull(ST_Collect(d.geom)) As geom
+-- 	FROM russia_clusters As d
+-- 	GROUP BY d.uuid
+
+--Select photo_id,photo_longitude,photo_latitude INTO russia_selection from russia_flickr limit 10000
+-- ALTER TABLE russia_selection ADD COLUMN geom geometry(POINT,4326); 
+-- UPDATE russia_selection SET geom = ST_SetSRID(ST_MakePoint(photo_longitude,photo_latitude),4326);
