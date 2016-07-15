@@ -13,17 +13,25 @@ import urllib
 import csv
 
 
-global key 
-global check_time
+# global key 
+# global check_time
 
 #### create default date ####
-fmt = '%Y-%m-%d'
-yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
-check_time = yesterday.strftime(fmt)
 
+def default_date():
+    fmt = '%Y-%m-%d'
+    yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
+    check_time = yesterday.strftime(fmt)
+    return check_time
+
+def launch_key(cred_key):
+    global key 
+    key = cred_key 
+    return key 
+        
 
 def places_search(lat,lon,page=1,radius=1.0):
-    """ Searches the Flickr API. 
+    """ Radius query of wikimapi api. 
     Args:
         lat  (float): latitude
         lon  (float): longitude
@@ -47,7 +55,7 @@ def places_search(lat,lon,page=1,radius=1.0):
         return None
 
 def bbox_search(lon_min,lat_min,lon_max,lat_max,page):
-    """ Searches the Flickr API. 
+    """ Bounding Box query of wikimapia API. 
     Args:
         lon_min (float): minimum longitude
         lat_min (float): minimum latitude
@@ -71,9 +79,17 @@ def bbox_search(lon_min,lat_min,lon_max,lat_max,page):
         return None
 
 def bbox_pages(lon_min,lat_min,lon_max,lat_max):
+    """ Returns the json of all the pages from a bbox_search. 
+    Args:
+        lat  (float): latitude
+        lon  (float): longitude
+        radius (float): number of kilometers to search 
+    Returns:
+        page_responses(list): list of json objects from the page responses 
+    """
     page_responses = [] 
     page = 1
-    found = bbox_search(lon_min,lat_min,lon_max,lat_max)
+    found = bbox_search(lon_min,lat_min,lon_max,lat_max,1)
     total_pages = (int(found['found']) / 100) + 1
     while page <= total_pages:
         search_results = bbox_search(lon_min,lat_min,lon_max,lat_max,page=page)
@@ -81,9 +97,17 @@ def bbox_pages(lon_min,lat_min,lon_max,lat_max):
             page_responses.append(search_results)
         page += 1 
     return page_responses 
-    
 
 def get_all_pages(lat,lon,radius):
+    """ Returns the json of all the pages from a radius search. 
+    Args:
+        lon_min (float): minimum longitude
+        lat_min (float): minimum latitude
+        lon_max (float): maximum longitude
+        lat_max (float): maximum latitude 
+    Returns:
+        page_responses(list): list of json objects from the page responses 
+    """
     page_responses = [] 
     page = 1
     found = places_search(lat,lon,page,radius)
@@ -96,10 +120,20 @@ def get_all_pages(lat,lon,radius):
     return page_responses 
     
 
-def check_time(upload_time,check_time=check_time):
+def check_time(upload_time,check_time=None):
+    """ Checks whether a photo was uploaded after a check time.
+        
+        Args:
+            upload_time(int): epoch date of when the photo was uploaded to wiki
+            check_time(str):  date str formatted YYYY-MM-DD (defaults to yesterday)
+        Returns:
+            True if the upload_time is newer than check_time 
+    """
+    if check_time == None:
+        check_time = default_date()
     date_object = datetime.datetime.strptime(check_time, '%Y-%m-%d')
     epoch_time = calendar.timegm(date_object.timetuple())
-    return 1 if upload_time > epoch_time else 0
+    return True if upload_time > epoch_time else False
 
 def iterate_places(search_results):
     pass
@@ -141,16 +175,44 @@ def get_buildings(response):
             buildings.append(place)
     return buildings 
         
-def photo_time(response):
+def photo_time(response,check=False,date=None):
+    """Gets the coordinates, time uploaded, and url of a photo. 
+    Args:
+       response(dict): json dictionary from a page response 
+
+    Returns:
+        buildings(list): list of page response for buildings 
+    """   
     photo_objects = []
     for place in response['places']:
         lat,lon = place['location']['lat'],place['location']['lon']
         for photo in place['photos']:
-            if photo['time']:
+            if check:
+                if check_time(photo['time'],date):
+                    time_string = datetime.datetime.fromtimestamp(photo['time']).strftime('%Y-%m-%d')
+                    photo_objects.append([photo['id'],lat,lon,time_string,photo['big_url']])
+            else:
                 time_string = datetime.datetime.fromtimestamp(photo['time']).strftime('%Y-%m-%d')
-                photo_objects.append([photo['id'],lat,lon,time_string,photo['big_url']])
+                photo_objects.append([photo['id'],lat,lon,time_string,photo['big_url']])            
     return photo_objects 
         
+
+def place_edit(place):
+    """Parses a wikimapia place 
+    Args:
+       place(dict): json dictionary of a place object 
+
+    Returns:
+        (tuple): returns place id, lat,lon, edit time, and userid as a tuple 
+    """   
+    edit = place['edit_info']
+    time_string = datetime.datetime.fromtimestamp(edit['date']).strftime('%Y-%m-%d')
+    return (place['id'],place['location']['lat'],
+            place['location']['lon'],time_string,edit['user_id'])
+
+
+def to_geojson(photo_time_response):
+    pass
 
 def save_photos(photo_url,photo_id,date=check_time):
     """ Saves the image of a url as a jpeg. 
@@ -162,7 +224,6 @@ def save_photos(photo_url,photo_id,date=check_time):
     Returns:
         None
     """   
-      
     location = os.path.realpath(os.path.join(os.getcwd(), 
                                              os.path.dirname(__file__)))
     path = location + "\\images"                                          
@@ -195,8 +256,10 @@ if __name__ == "__main__":
     e = get_all_pages(lat=lat,lon=lon,radius=1)    
     all_photos = []
     for response in e:
-        all_photos.extend(photo_time(response))
-    csv_output(all_photos,"withurls.csv")
+        for place in response['places']:
+            for photo in place['photos']:
+                all_photos.append(photo)
+      
 
     
     
