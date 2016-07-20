@@ -11,7 +11,7 @@ import calendar
 import os 
 import urllib
 import csv
-
+import re 
 
 # global key 
 # global check_time
@@ -237,29 +237,27 @@ def save_photos(photo_url,photo_id,date=check_time):
     return 
     
 
+def format_place(place):
+    time_string = datetime.datetime.fromtimestamp(place['edit_info']['date']).strftime('%Y-%m-%d')
+    url = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', 
+                     place['urlhtml'])
+    return (place['id'],place['edit_info']['user_id'],place['location']['lat'],
+            place['location']['lon'],time_string,'place',url[0])
+
+def format_photo(place):
+    formatted_photos = [] 
+    if place['photos']:
+        pid = place['id']
+        lat,lon = place['location']['lat'],place['location']['lon']
+        for photo in place['photos']:
+            user_id = photo['user_id']
+            time_string = datetime.datetime.fromtimestamp(photo['time']).strftime('%Y-%m-%d')
+            formatted_photos.append((pid,user_id,lat,lon,time_string,'photo',photo['big_url']))
+    return formatted_photos
+        
 
 def csv_output(rows,filename):
     with open(filename, "wb") as f:
         writer = csv.writer(f)
         writer.writerows(rows)
 
-
-
-if __name__ == "__main__":
-    location = os.path.realpath(os.path.join(os.getcwd(), 
-                                             os.path.dirname(__file__)))
-    cred_path = os.path.join(location,"creds.json")                                         
-    with open(cred_path) as data_file: creds = json.load(data_file)   
-    key = creds['key']                                     
-    lat = 59.924121
-    lon = 30.2719319                                    
-    e = get_all_pages(lat=lat,lon=lon,radius=1)    
-    all_photos = []
-    for response in e:
-        for place in response['places']:
-            for photo in place['photos']:
-                all_photos.append(photo)
-      
-
-    
-    
