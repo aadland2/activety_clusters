@@ -74,7 +74,7 @@ def bundle_places(pairs,views):
     rows = []
     for i in range(len(pairs)):
         discrete = [discretize(x) for x in stats.zcore(views[i][0])]
-        current_row = format_table(pairs[i],discrete,views[i][0],discrete,views[i][1])
+        current_row = format_table(pairs[i],discrete,views[i][0],views[i][1])
         rows += current_row
     return rows 
 
@@ -83,7 +83,7 @@ pairs = [(x['lat'],x['lon']) for x in results]
 formatted_titles = [x["title"].replace(" ","_") for x in results] 
 views = [page_views(x.encode('utf8'),20150101,20160101) for x in formatted_titles]
 formatted_views = [format_view(x) for x in views]
-
+rows = bundle_places(pairs,formatted_views)
 
 
 #### Airport ####
